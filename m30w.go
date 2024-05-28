@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -32,6 +35,12 @@ type Config struct {
 type Subscription struct {
 	gorm.Model
 	RoomID string `gorm:"unique"`
+}
+
+type ReqSendImage struct {
+	Body    string `json:"body"`
+	MsgType string `json:"msgtype"`
+	Url     string `json:"url"`
 }
 
 var (
@@ -171,8 +180,38 @@ func sendTheCats() {
 		log.Fatal(result.Error)
 	}
 
+	// Download a cat image from cataas.com
+	resp, err := http.Get("https://cataas.com/cat")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	uploadRequest := mautrix.ReqUploadMedia{
+		ContentBytes:  body,
+		ContentLength: int64(len(body)),
+		ContentType:   "image/jpeg",
+		FileName:      fmt.Sprintf("m30w-%d.jpg", time.Now().Unix()),
+	}
+
+	// Upload the cat image to the homeserver
+	media, err := m30w.UploadMedia(context.TODO(), uploadRequest)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Send the cat images to all the subscribed rooms
 	for _, subscription := range subscriptions {
-		m30w.SendText(context.TODO(), id.RoomID(subscription.RoomID), "Cat time!")
+		imageReq := ReqSendImage{
+			Body:    "Cat time!",
+			MsgType: "m.image",
+			Url:     media.ContentURI.String(),
+		}
+		m30w.SendMessageEvent(context.TODO(), id.RoomID(subscription.RoomID), event.EventMessage, imageReq)
 	}
 }
