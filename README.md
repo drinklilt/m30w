@@ -2,11 +2,8 @@
 > Get cat images in matrix
 
 **Usage:**  
-Subscribe:  
-`pls sub https://matrix.to/#/#m30w:net.cafe`
-
-Unsubscribe:  
-`pls unsub https://matrix.to/#/#m30w:net.cafe`
+To subscribe the bot to a room, simply invite it to the room.  
+To unsubscribe, TODO
 
 Idea:
 - Send it an invite to a room
